@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Air Quality Monitor</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 AQI Intelligence System</h1>
+        <p class="subtitle">Real-time Environmental Monitoring with AI & Java DSA</p>
+        
+        <!-- Main Status Cards Row -->
+        <div class="cards-grid">
+            <!-- Air Quality Card -->
+            <div id="aqi-card" class="card status-card aqi-card">
+                <div class="card-title">💨 Air Quality</div>
+                <div class="aqi-display">
+                    <div class="aqi-number" id="aqi-value">--</div>
+                    <div class="aqi-unit">PPM</div>
+                </div>
+                <h3 id="aqi-status" class="status-text">Detecting...</h3>
+                <p id="aqi-advice" class="advice-text"></p>
+            </div>
+
+            <!-- Temperature Card -->
+            <div id="temp-card" class="card status-card temp-card">
+                <div class="card-title">🌡️ Temperature</div>
+                <div class="temp-display">
+                    <div class="temp-number" id="temp-value">--°C</div>
+                </div>
+                <h3 id="temp-status" class="status-text">--</h3>
+                <p id="temp-icon" class="status-icon"></p>
+                <p id="temp-advice" class="advice-text"></p>
+            </div>
+
+            <!-- Humidity Card -->
+            <div id="humidity-card" class="card status-card humidity-card">
+                <div class="card-title">💧 Humidity</div>
+                <div class="humidity-display">
+                    <div class="humidity-number" id="humidity-value">--%</div>
+                </div>
+                <h3 id="humidity-status" class="status-text">--</h3>
+                <p id="humidity-icon" class="status-icon"></p>
+                <p id="humidity-advice" class="advice-text"></p>
+            </div>
+        </div>
+
+        <!-- AI Predictions Section -->
+        <div class="card predictions-card">
+            <h2>🔮 AI Predictions (Next 24 Hours)</h2>
+            <div class="predictions-grid">
+                <!-- Temperature Predictions -->
+                <div class="prediction-section">
+                    <h3>🌡️ Temperature Forecast</h3>
+                    <div class="prediction-timeline">
+                        {% if predictions and predictions.temperature %}
+                            {% for pred in predictions.temperature.forecast %}
+                                <div class="prediction-item temp-prediction" style="border-left-color: #ff6b6b;">
+                                    <div class="pred-time">+{{ pred.hours_ahead }}h</div>
+                                    <div class="pred-value">{{ "%.1f"|format(pred.predicted_value) }}°C</div>
+                                    <div class="pred-status">{{ pred.status }}</div>
+                                    <div class="pred-icon">{{ pred.icon }}</div>
+                                    <div class="pred-advice">{{ pred.advice }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="prediction-item no-data">
+                                <div class="pred-time">No Data</div>
+                                <div class="pred-value">--</div>
+                                <div class="pred-status">Collecting data...</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- AQI Predictions -->
+                <div class="prediction-section">
+                    <h3>💨 AQI Forecast</h3>
+                    <div class="prediction-timeline">
+                        {% if predictions and predictions.aqi %}
+                            {% for pred in predictions.aqi.forecast %}
+                                <div class="prediction-item aqi-prediction" style="border-left-color: {{ pred.color }};">
+                                    <div class="pred-time">+{{ pred.hours_ahead }}h</div>
+                                    <div class="pred-value">{{ "%.1f"|format(pred.predicted_value) }}</div>
+                                    <div class="pred-status">{{ pred.status }}</div>
+                                    <div class="pred-color" style="background-color: {{ pred.color }};"></div>
+                                    <div class="pred-advice">{{ pred.advice }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="prediction-item no-data">
+                                <div class="pred-time">No Data</div>
+                                <div class="pred-value">--</div>
+                                <div class="pred-status">Collecting data...</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 24h Predicted Summary Card -->
+        <div class="card forecast-summary">
+            <h2>🔮 24h Predicted Aqi/Temp (Simulation)</h2>
+            <div class="forecast-grid">
+                <div class="forecast-item"><span>Next hour AQI</span><strong id="pred-aqi">--</strong></div>
+                <div class="forecast-item"><span>Next hour Temp</span><strong id="pred-temp">--°C</strong></div>
+                <div class="forecast-item"><span>Next hour Humidity</span><strong id="pred-humidity">--%</strong></div>
+                <div class="forecast-item"><span>24h max AQI</span><strong id="pred-aqi-max">--</strong></div>
+                <div class="forecast-item"><span>24h max Temp</span><strong id="pred-temp-max">--°C</strong></div>
+                <div class="forecast-item"><span>24h min Temp</span><strong id="pred-temp-min">--°C</strong></div>
+            </div>
+        </div>
+
+        <!-- Compact Environment Tiles (AQI and Temp focused) -->
+        <div class="card weather-tile-grid">
+            <h2>🧭 Environment Snapshot</h2>
+            <div class="weather-grid">
+                <div class="weather-block">
+                    <div class="block-title">AQI (Filtered)</div>
+                    <div class="block-value" id="aqi-value-small">--</div>
+                    <div class="block-note">Live air quality from simulated sensor</div>
+                </div>
+                <div class="weather-block">
+                    <div class="block-title">Temperature</div>
+                    <div class="block-value" id="temp-value-small">--°C</div>
+                    <div class="block-note">Live temperature reading</div>
+                </div>
+                <div class="weather-block">
+                    <div class="block-title">Humidity</div>
+                    <div class="block-value" id="hum-value-small">--%</div>
+                    <div class="block-note">Live humidity level</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Chart -->
+        <div class="card chart-card">
+            <h2>📈 Real-time Trends</h2>
+            <canvas id="aqiChart"></canvas>
+        </div>
+
+        <!-- System Info -->
+        <div class="card info-card">
+            <h3>🔧 System Architecture</h3>
+            <div class="architecture">
+                <div class="step">📡 <strong>Sensors</strong><br>MQ-135 (AQI)<br>DHT22 (Temp/Humidity)</div>
+                <div class="arrow">→</div>
+                <div class="step">🐍 <strong>Python</strong><br>Flask Server</div>
+                <div class="arrow">→</div>
+                <div class="step">☕ <strong>Java DSA</strong><br>Circular Queue</div>
+                <div class="arrow">→</div>
+                <div class="step">🤖 <strong>AI Report</strong><br>Intelligence</div>
+            </div>
+        </div>
+
+        <!-- Data Input Info -->
+        <div class="card api-info">
+            <h3>📤 How to Send Real Sensor Data</h3>
+            <div class="info-content">
+                <p><strong>API Endpoint:</strong> <code>POST /send_sensor_data</code></p>
+                <p><strong>Content-Type:</strong> <code>application/json</code></p>
+                <details>
+                    <summary>📋 See Example Code</summary>
+                    <div class="code-block">
+<pre>// Python Example
+import requests
+
+data = {
+    "aqi_raw": 245.5,      # MQ-135 sensor reading
+    "temperature": 28.5,    # DHT22/BMP180 reading
+    "humidity": 65          # DHT22 reading
+}
+
+response = requests.post('http://localhost:5000/send_sensor_data', json=data)
+print(response.json())
+</pre>
+                    </div>
+                    <div class="code-block">
+<pre>// cURL Example
+curl -X POST http://localhost:5000/send_sensor_data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "aqi_raw": 245,
+    "temperature": 28.5,
+    "humidity": 65
+  }'
+</pre>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Chart.js
+        const ctx = document.getElementById('aqiChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Filtered AQI (PPM)',
+                    data: [],
+                    borderColor: '#00d2ff',
+                    backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#00d2ff',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Temperature (°C)',
+                    data: [],
+                    borderColor: '#ff6b6b',
+                    backgroundColor: 'rgba(255, 107, 107, 0.05)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    borderDash: [5, 5],
+                    pointBackgroundColor: '#ff6b6b',
+                    yAxisID: 'y1'
+                },
+                {
+                    label: 'Humidity (%)',
+                    data: [],
+                    borderColor: '#4ecdc4',
+                    backgroundColor: 'rgba(78, 205, 196, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    borderDash: [2, 2],
+                    pointBackgroundColor: '#4ecdc4',
+                    yAxisID: 'y2'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        labels: { color: '#fff', font: { size: 12 } }
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        max: 600,
+                        title: { display: true, text: 'AQI (PPM)', color: '#00d2ff' },
+                        grid: { color: 'rgba(0, 210, 255, 0.1)' },
+                        ticks: { color: '#00d2ff' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        min: 0,
+                        max: 50,
+                        title: { display: true, text: 'Temp (°C)', color: '#ff6b6b' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#ff6b6b' }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        offset: true,
+                        beginAtZero: true,
+                        max: 100,
+                        title: { display: true, text: 'Humidity (%)', color: '#4ecdc4' },
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#4ecdc4' }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#fff' }
+                    }
+                }
+            }
+        });
+
+        let updateCount = 0;
+        const MAX_POINTS = 20;
+
+        async function updateDashboard() {
+            try {
+                const response = await fetch('/sensor_data');
+                const data = await response.json();
+
+                // Prediction summary values (no hardware required)
+                if (data.predictions) {
+                    const aqiForecast = data.predictions.aqi || null;
+                    const tempForecast = data.predictions.temperature || null;
+                    if (aqiForecast && aqiForecast.forecast.length > 0) {
+                        document.getElementById('pred-aqi').innerText = aqiForecast.forecast[0].predicted_value.toFixed(1);
+                        document.getElementById('pred-aqi-max').innerText = Math.max(...aqiForecast.forecast.map(i => i.predicted_value)).toFixed(1);
+                    }
+                    if (tempForecast && tempForecast.forecast.length > 0) {
+                        document.getElementById('pred-temp').innerText = tempForecast.forecast[0].predicted_value.toFixed(1) + '°C';
+                        document.getElementById('pred-temp-max').innerText = Math.max(...tempForecast.forecast.map(i => i.predicted_value)).toFixed(1) + '°C';
+                        document.getElementById('pred-temp-min').innerText = Math.min(...tempForecast.forecast.map(i => i.predicted_value)).toFixed(1) + '°C';
+                    }
+                    if (data.humidity && data.humidity.value !== undefined) {
+                        document.getElementById('pred-humidity').innerText = data.humidity.value + '%';
+                        document.getElementById('hum-value-small').innerText = data.humidity.value + '%';
+                    }
+                    if (data.aqi && data.aqi.value !== undefined) {
+                        document.getElementById('aqi-value-small').innerText = data.aqi.value;
+                    }
+                    if (data.temperature && data.temperature.value !== undefined) {
+                        document.getElementById('temp-value-small').innerText = data.temperature.value + '°C';
+                    }
+                }
+
+                // Update AQI Card Display
+                const aqiCard = document.getElementById('aqi-card');
+                aqiCard.style.borderColor = data.aqi.color;
+
+                document.getElementById('aqi-value').innerText = data.aqi.value;
+                document.getElementById('aqi-value').style.color = data.aqi.color;
+                document.getElementById('aqi-status').innerText = data.aqi.status;
+                document.getElementById('aqi-status').style.color = data.aqi.color;
+                document.getElementById('aqi-advice').innerText = data.aqi.advice;
+
+                // Update Temperature Card
+                const tempCard = document.getElementById('temp-card');
+                tempCard.style.borderColor = '#ff6b6b';
+                document.getElementById('temp-value').innerText = data.temperature.value + '°C';
+                document.getElementById('temp-status').innerText = data.temperature.status;
+                document.getElementById('temp-icon').innerText = data.temperature.icon;
+                document.getElementById('temp-advice').innerText = data.temperature.advice;
+
+                // Update Humidity Card
+                const humidityCard = document.getElementById('humidity-card');
+                humidityCard.style.borderColor = '#4ecdc4';
+                document.getElementById('humidity-value').innerText = data.humidity.value + '%';
+                document.getElementById('humidity-status').innerText = data.humidity.status;
+                document.getElementById('humidity-icon').innerText = data.humidity.icon;
+                document.getElementById('humidity-advice').innerText = data.humidity.advice;
+
+                // Update compact weather dashboard values
+                document.getElementById('hum-value').innerText = data.humidity.value + '%';
+                document.getElementById('dew-value').innerText = (data.temperature.value - ((100 - data.humidity.value) / 5)).toFixed(1) + '°C';
+                document.getElementById('uv-value').innerText = 2;
+                document.getElementById('wind-value').innerText = '6 km/h';
+                document.getElementById('pressure-value').innerText = '1012 mb';
+                document.getElementById('visibility-value').innerText = '15 km';
+
+                // Keep the legacy compare panel data for transparency
+                document.getElementById('raw-value').innerText = data.aqi.raw;
+                document.getElementById('filtered-value').innerText = data.aqi.filtered;
+                document.getElementById('last-update').innerText = new Date(data.timestamp).toLocaleTimeString();
+
+                // Update Chart
+                const timestamp = new Date().toLocaleTimeString();
+                chart.data.labels.push(timestamp);
+                chart.data.datasets[0].data.push(data.aqi.filtered);
+                chart.data.datasets[1].data.push(data.temperature.value);
+                chart.data.datasets[2].data.push(data.humidity.value);
+
+                // Keep only last MAX_POINTS
+                if (chart.data.labels.length > MAX_POINTS) {
+                    chart.data.labels.shift();
+                    chart.data.datasets[0].data.shift();
+                    chart.data.datasets[1].data.shift();
+                    chart.data.datasets[2].data.shift();
+                }
+
+                chart.update('none');
+
+                updateCount++;
+                console.log(`[${updateCount}] AQI: ${data.aqi.value} | Temp: ${data.temperature.value}°C | Humidity: ${data.humidity.value}%`);
+
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+                document.getElementById('aqi-status').innerText = 'Connection Error';
+            }
+        }
+
+        async function updatePredictions() {
+            try {
+                const response = await fetch('/predictions?hours=24');
+                const data = await response.json();
+
+                if (data.predictions_available) {
+                    // Update Temperature Predictions
+                    if (data.temperature && data.temperature.forecast) {
+                        const tempContainer = document.querySelector('.prediction-section:nth-child(1) .prediction-timeline');
+                        tempContainer.innerHTML = '';
+                        
+                        data.temperature.forecast.forEach(pred => {
+                            const predItem = document.createElement('div');
+                            predItem.className = 'prediction-item temp-prediction';
+                            predItem.style.borderLeftColor = '#ff6b6b';
+                            predItem.innerHTML = `
+                                <div class="pred-time">+${pred.hours_ahead}h</div>
+                                <div class="pred-value">${pred.predicted_value.toFixed(1)}°C</div>
+                                <div class="pred-status">${pred.status}</div>
+                                <div class="pred-icon">${pred.icon}</div>
+                                <div class="pred-advice">${pred.advice}</div>
+                            `;
+                            tempContainer.appendChild(predItem);
+                        });
+                    }
+
+                    // Update AQI Predictions
+                    if (data.aqi && data.aqi.forecast) {
+                        const aqiContainer = document.querySelector('.prediction-section:nth-child(2) .prediction-timeline');
+                        aqiContainer.innerHTML = '';
+                        
+                        data.aqi.forecast.forEach(pred => {
+                            const predItem = document.createElement('div');
+                            predItem.className = 'prediction-item aqi-prediction';
+                            predItem.style.borderLeftColor = pred.color;
+                            predItem.innerHTML = `
+                                <div class="pred-time">+${pred.hours_ahead}h</div>
+                                <div class="pred-value">${pred.predicted_value.toFixed(1)}</div>
+                                <div class="pred-status">${pred.status}</div>
+                                <div class="pred-color" style="background-color: ${pred.color};"></div>
+                                <div class="pred-advice">${pred.advice}</div>
+                            `;
+                            aqiContainer.appendChild(predItem);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching predictions:', error);
+            }
+        }
+
+        // Initial updates
+        updateDashboard();
+        updatePredictions();
+
+        // Update sensor data every 2 seconds
+        setInterval(updateDashboard, 2000);
+
+        // Update predictions every 30 seconds (less frequent as predictions don't change as rapidly)
+        setInterval(updatePredictions, 30000);
+    </script>
+</body>
+</html>
